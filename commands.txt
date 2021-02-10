@@ -1,0 +1,4 @@
+b Interpreter.cpp:interpret
+run ../TracingJITCompiler/test/java.class
+display i
+display pc
