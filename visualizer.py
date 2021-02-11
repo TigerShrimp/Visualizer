@@ -1,33 +1,53 @@
 import subprocess
 import threading
+import re
+from queue import Queue, Empty
 from time import sleep
 
 
-def read(process):
-    res = ""
-    for line in iter(process.stdout.readline, b'(gdb) \n'):
-        res += line.decode('Utf8')
-    return res
+def reader(process, queue):
+    for line in iter(process.stdout.readline, b''):
+        queue.put(line.decode('Utf8'))
 
 
-def write(process, command):
+def read(queue):
+    lines = ""
+    while True:
+        line = queue.get()
+        lines += line
+        if "(gdb)" in line and queue.empty():
+            return lines
+
+
+def write(process, command):  # Assure endl of command
     encodedCommand = command.encode('Utf8')
-    print("Writing:", encodedCommand)
+    print("Writing: {} to gdb".format(command[:-1]))
     process.stdin.write(encodedCommand)
     process.stdin.flush()
     sleep(0.5)
 
 
-cmd = ["gdb", "/Users/jakoberlandsson/Documents/MasterThesis/TracingJITCompiler/build/TigerShrimp",
+def najs_print(variables):
+    for v in variables:
+        v = v.split(" = ")
+        print("The variable with name {} has value {} :)".format(v[0], v[1]))
+
+
+cmd = ["gdb", "../TracingJITCompiler/build/TigerShrimp",
        "-x", "commands.txt", "-q", "--interpreter=mi"]
-p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                     stdin=subprocess.PIPE)
-# p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-res = read(p)
-print(res)
-write(p, "next\n")
-res = read(p)
-print(res)
+p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+readQueue = Queue()
+reader = threading.Thread(target=reader, args=(p, readQueue))
+reader.daemon = True
+reader.start()
+for i in range(10):
+    write(p, "next\n")
+    res = read(readQueue)
+    pattern = r"\d+:\s(\w[0-9a-zA-Z]*\s=\s-?\d+)"
+    regex = re.compile(pattern)
+    variables = regex.findall(res)
+    najs_print(variables)
+sleep(10)
 p.stdin.close()
 p.wait()
 print("Done")
