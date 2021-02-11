@@ -1,8 +1,14 @@
 import subprocess
 import threading
 import re
+import sys
 from queue import Queue, Empty
 from time import sleep
+
+variables_pattern = r"\d+:\s(\w[0-9a-zA-Z]*\s=\s-?\d+)"
+stopped_reason_pattern = r"\*stopped,reason=\"([^\"]*)"
+variables_regex = re.compile(variables_pattern)
+stopped_reason_regex = re.compile(stopped_reason_pattern)
 
 
 def reader(process, queue):
@@ -24,7 +30,6 @@ def write(process, command):  # Assure endl of command
     print("Writing: {} to gdb".format(command[:-1]))
     process.stdin.write(encodedCommand)
     process.stdin.flush()
-    sleep(0.5)
 
 
 def najs_print(variables):
@@ -66,15 +71,18 @@ def start_gdb():
 
 
 def main():
+    sleepytime = float(sys.argv[1]) if len(sys.argv) > 1 else 0
     p, read_queue = start_gdb()
-    for (_, _) in enumerate(range(10)):
-        write(p, "next\n")
+    stopped_reason = ""
+    while stopped_reason != "exited-normally":
+        write(p, "continue\n")
         res = read(read_queue)
-        pattern = r"\d+:\s(\w[0-9a-zA-Z]*\s=\s-?\d+)"
-        regex = re.compile(pattern)
-        variables = regex.findall(res)
+        variables = variables_regex.findall(res)
+        stopped_reasons = stopped_reason_regex.findall(res)
+        stopped_reason = stopped_reasons[-1] if stopped_reasons else ""
+        print(stopped_reason)
         najs_print(variables)
-    sleep(10)
+        sleep(sleepytime)
     p.stdin.close()
     p.wait()
     print("Done")
