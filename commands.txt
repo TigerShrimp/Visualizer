@@ -2,3 +2,6 @@ b Interpreter.cpp:16
 run ../TracingJITCompiler/test/main.class
 display i
 display pc
+define hook-stop
+  info registers
+end
