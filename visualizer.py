@@ -33,49 +33,51 @@ def najs_print(variables):
         print("The variable with name {} has value {} :)".format(v[0], v[1]))
 
 
-cmd = ["gdb", "../TracingJITCompiler/build/TigerShrimp",
-       "-x", "commands.txt", "-q", "--interpreter=mi"]
-p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-readQueue = Queue()
-reader = threading.Thread(target=reader, args=(p, readQueue))
-reader.daemon = True
-reader.start()
-for i in range(10):
-    write(p, "next\n")
-    res = read(readQueue)
-    pattern = r"\d+:\s(\w[0-9a-zA-Z]*\s=\s-?\d+)"
-    regex = re.compile(pattern)
-    variables = regex.findall(res)
-    najs_print(variables)
-sleep(10)
-p.stdin.close()
-p.wait()
-print("Done")
-# sleep(5)
-# write(p, "next\n\0")
-# write(p, "next\n\0")
-# write(p, "next\n\0")
-# write(p, "next\n\0")
-# write(p, "next\n\0")
-# write(p, "next\n\0")
-# sleep(10)
-# read(p)
+def check_gdb_startup(queue):
+    while True:
+        try:
+            line = queue.get(timeout=1)
+            print(line)
+        except Empty:
+            return False
+        else:
+            if "(gdb)" in line and queue.empty():
+                return True
 
-# from pygdbmi.gdbcontroller import GdbController
-# from pprint import pprint
 
-# # Start gdb process
-# gdbmi = GdbController()
-# # print(gdbmi.get_subprocess_cmd())  # print actual command run as subprocess
+def restart_gdb(process, thread):
+    process.kill()
+    # TODO Take care of thread so that they do not cause any further problems
+    return start_gdb()
 
-# # Load binary a.out and get structured response
-# response = gdbmi.write(
-#     '-file-exec-file /Users/jakoberlandsson/Documents/MasterThesis/TracingJITCompiler/build/TigerShrimp')
-# pprint(response)
 
-# response = gdbmi.write(
-#     'break Interpreter.cpp:interpret')
-# pprint(response)
-# response = gdbmi.write(
-#     'run /Users/jakoberlandsson/Documents/MasterThesis/TracingJITCompiler/test/java.class')
-# pprint(response)
+def start_gdb():
+    cmd = ["gdb", "../TracingJITCompiler/build/TigerShrimp",
+           "-x", "commands.txt", "-q", "--interpreter=mi"]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    read_queue = Queue()
+    reader_t = threading.Thread(target=reader, args=(p, read_queue))
+    reader_t.daemon = True
+    reader_t.start()
+    if check_gdb_startup(read_queue):
+        return p, read_queue
+    else:
+        return restart_gdb(p, reader_t)
+
+
+def main():
+    p, read_queue = start_gdb()
+    for (_, _) in enumerate(range(10)):
+        write(p, "next\n")
+        res = read(read_queue)
+        pattern = r"\d+:\s(\w[0-9a-zA-Z]*\s=\s-?\d+)"
+        regex = re.compile(pattern)
+        variables = regex.findall(res)
+        najs_print(variables)
+    sleep(10)
+    p.stdin.close()
+    p.wait()
+    print("Done")
+
+
+main()
