@@ -1,5 +1,5 @@
 b Interpreter.cpp:16
-run ../TracingJITCompiler/test/main.class
+run ##PLACEHOLDER_CLASS_FILE##
 display i
 display pc
 define hook-stop

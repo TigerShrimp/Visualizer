@@ -1,3 +1,4 @@
+from constants import CMD_FILE_PATH
 from subprocess import PIPE, Popen
 from queue import Empty, Queue
 from threading import Thread
@@ -39,10 +40,10 @@ class GDB():
         """
         Starts the GDB subprocess and listens to its output to determine wether it started
         up without issues. If issues occurs with gdb, it will be restared until issues not
-        occur. (Runs gdb ../TracingJITCompiler/build/TigerShrimp -x commands.txt -q --interpreter=mi)
+        occur. (Runs gdb ../TracingJITCompiler/build/TigerShrimp -x "visualizer/commands.txt" -q --interpreter=mi)
         """
         cmd = ["gdb", "../TracingJITCompiler/build/TigerShrimp",
-               "-x", "visualizer/commands.txt", "-q", "--interpreter=mi"]
+               "-x", CMD_FILE_PATH, "-q", "--interpreter=mi"]
         self.gdb_process = Popen(cmd, stdout=PIPE, stdin=PIPE)
         self.reader = Reader(self.gdb_process)
         if self.check_startup():
