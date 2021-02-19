@@ -2,58 +2,60 @@ import re
 
 
 class Parser():
-    """ Handles extraction of relevant data from the GDB output
+    """ Handles extraction of relevant data from the LLDB output
     """
-    VARIABLES_PATTERN = r"\d+:\s(\w[0-9a-zA-Z]*\s=\s-?\d+)"
     REGISTERS_PATTERN = r"r[0-9a-z]+\s+0x[^\s]*"
-    STOPPED_REASON_PATTERN = r"\*stopped,reason=\"([^\"]*)"
+    STOPPED_PATTERN = r"Process\s\d+\sexited\swith\sstatus\s=\s\d\s"
+    LOCAL_VARIABLE_STORE_PATTERN = r"first = (\d+)[^.]*type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
+    STACK_PATTERN = r"type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
 
     def __init__(self):
-        self.variables_regex = re.compile(Parser.VARIABLES_PATTERN)
         self.registers_regex = re.compile(Parser.REGISTERS_PATTERN)
-        self.stopped_reason_regex = re.compile(Parser.STOPPED_REASON_PATTERN)
-
-    def parse_variables(self, output):
-        """ Parses variables in the form \"n: id = val\"
-
-        Args:
-          output: output from GDB after hitting a breakpoint
-        Returns:
-          [id, val]
-        """
-        return [v.split(" = ") for v in self.variables_regex.findall(output)]
+        self.stopped_regex = re.compile(Parser.STOPPED_PATTERN)
+        self.local_variable_store_regex = re.compile(
+            Parser.LOCAL_VARIABLE_STORE_PATTERN)
+        self.stack_pattern_regex = re.compile(Parser.STACK_PATTERN)
 
     def parse_registers(self, output):
         """ Parses registers in the form \"reg  0x...\"
 
         Args:
-          output: output from GDB after hitting a breakpoint
+          output: output from LLDB after hitting a breakpoint
         Returns:
           [reg, 0x...]
         """
         return [list(filter(None, r.split(" "))) for r in self.registers_regex.findall(output)]
 
-    def parse_stop_reason(self, output):
-        """ Parses text in the form \"*stopped,reason=\"actual_reason\"\"
+    def parse_stopped(self, output):
+        """ Parses text in the form \"Process #### exited with status = #"\"
 
         Args:
-          output: output from GDB after hitting a breakpoint
+          output: output from LLDB after hitting a breakpoint
         Returns:
-          actual_reason
+          True if stop message is found in output
         """
-        stopped_reasons = self.stopped_reason_regex.findall(output)
-        return stopped_reasons[-1] if stopped_reasons else ""
+        return self.stopped_regex.search(output)
 
     def parse(self, output):
-        """ Parses output from GDB.
+        """ Parses output from LLDB.
         Currently supports variables, registers and stop reason
 
         Args:
-          output: output from GDB after hitting a breakpoint
+          output: output from LLDB after hitting a breakpoint
         Returns:
             parsed variables, registers and stop reason
         """
-        variables = self.parse_variables(output)
+        chunks = output.split("\n\n")
+        for chunk in chunks:
+            if "General Purpose Registers:" in chunk:
+                print("Registers:", chunk)
+            elif "state->stack" in chunk:
+                print("Stack:", chunk)
+            elif "state->locals" in chunk:
+                print("Locals:", chunk)
+            elif any([var in chunk for var in ["state->method = ", "state->pc = ", "(Mnemonic) mnemonic = "]]):
+                print("Variables:", chunk)
+
         registers = self.parse_registers(output)
-        stopped_reason = self.parse_stop_reason(output)
-        return variables, registers, stopped_reason
+        stopped = self.parse_stopped(output)
+        return registers, stopped
