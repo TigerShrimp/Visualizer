@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from constants import CLASS_FILE_PLACEHOLDER, Color, CMD_FILE_PATH, TEMPLATE_CMD_FILE_PATH
-from gdb import GDB
+from lldb import LLDB
 from parser import Parser
 from printer import Printer
 from os import remove
@@ -42,20 +42,20 @@ def main():
     classFile, sleepytime = parse_args()
     configure_gdb_commands_file(classFile)
     try:
-        gdb = GDB()
+        lldb = LLDB()
         parser = Parser()
         printer = Printer()
-        gdb.start()
-        stopped_reason = ""
-        while stopped_reason != "exited-normally":
-            gdb.write("continue\n")
-            output = gdb.read()
-            variables, registers, stopped_reason = parser.parse(output)
-            printer.print(variables, registers)
+        lldb.start()
+        stopped = None
+        while not stopped:
+            lldb.write("continue\n")
+            output = lldb.read()
+            registers, stopped = parser.parse(output)
+            # printer.print(registers)
             sleep(sleepytime)
     finally:
         remove(CMD_FILE_PATH)
-        gdb.stop()
+        lldb.stop()
 
 
 main()
