@@ -47,11 +47,23 @@ def main():
         printer = Printer()
         lldb.start()
         stopped = None
+        registers = None
+        stack = None
+        local_variables = None
+        interpreter_variables = None
+        stopped = None
         while not stopped:
             lldb.write("continue\n")
             output = lldb.read()
-            registers, stopped = parser.parse(output)
-            # printer.print(registers)
+            _registers, _stack, _local_variables, _interpreter_variables, stopped = parser.parse(
+                output)
+            registers = _registers if _registers else registers
+            stack = _stack if _stack else stack
+            local_variables = _local_variables if _local_variables else local_variables
+            interpreter_variables = _interpreter_variables if _interpreter_variables else interpreter_variables
+            if all([registers, stack, local_variables, interpreter_variables]):
+                printer.print(registers, stack, local_variables,
+                              interpreter_variables)
             sleep(sleepytime)
     finally:
         remove(CMD_FILE_PATH)
