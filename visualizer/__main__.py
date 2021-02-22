@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from constants import CLASS_FILE_PLACEHOLDER, Color, CMD_FILE_PATH, TEMPLATE_CMD_FILE_PATH
 from lldb import LLDB
 from parser import Parser
+from state import State
 from printer import Printer
 from os import remove
 from time import sleep
@@ -17,12 +18,15 @@ def parse_args():
         description="visualizer: visualize run-time behavior of TigerShrimp's Tracing JIT Compiler")
     arg_parser.add_argument(
         "file", help="JVM class file that the JIT compiler should run", type=str)
-    arg_parser.add_argument(
+    group = arg_parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--sleep", "-s", help="Sleep time between info frames, default 0.1", type=float, default=.1)
+    group.add_argument(
+        "--manual", "-m", help="Manually step through the program", action='store_true')
     args = arg_parser.parse_args()
     classFile = args.file
     if classFile.endswith(".class"):
-        return classFile, args.sleep
+        return classFile, args.sleep, args.manual
     else:
         print("visualizer: {}error{}: given file should be an .class file".format(
             Color.RED, Color.END))
@@ -39,32 +43,27 @@ def configure_gdb_commands_file(classFile):
 
 
 def main():
-    classFile, sleepytime = parse_args()
+    classFile, sleepytime, manual = parse_args()
     configure_gdb_commands_file(classFile)
     try:
         lldb = LLDB()
         parser = Parser()
+        state = State()
         printer = Printer()
         lldb.start()
-        stopped = None
-        registers = None
-        stack = None
-        local_variables = None
-        interpreter_variables = None
         stopped = None
         while not stopped:
             lldb.write("continue\n")
             output = lldb.read()
-            _registers, _stack, _local_variables, _interpreter_variables, stopped = parser.parse(
+            registers, stack, local_variables, interpreter_variables, stopped = parser.parse(
                 output)
-            registers = _registers if _registers else registers
-            stack = _stack if _stack else stack
-            local_variables = _local_variables if _local_variables else local_variables
-            interpreter_variables = _interpreter_variables if _interpreter_variables else interpreter_variables
-            if all([registers, stack, local_variables, interpreter_variables]):
-                printer.print(registers, stack, local_variables,
-                              interpreter_variables)
-            sleep(sleepytime)
+            state.update(registers, interpreter_variables,
+                         local_variables, stack)
+            printer.print(state)
+            if manual:
+                input("Press ENTER to proceed")
+            else:
+                sleep(sleepytime)
     finally:
         remove(CMD_FILE_PATH)
         lldb.stop()

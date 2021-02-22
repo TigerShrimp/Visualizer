@@ -43,7 +43,7 @@ class LLDB():
         occur. (Runs lldb ../TracingJITCompiler/build/TigerShrimp -x "visualizer/commands.txt" -q --interpreter=mi)
         """
         cmd = ["lldb", "../TracingJITCompiler/build/TigerShrimp",
-               "--source", "visualizer/lldb_commands.txt"]
+               "--source", CMD_FILE_PATH]
         self.lldb_process = Popen(cmd, stdout=PIPE, stdin=PIPE)
         self.reader = Reader(self.lldb_process)
 

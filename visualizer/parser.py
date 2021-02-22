@@ -4,7 +4,7 @@ import re
 class Parser():
     """ Handles extraction of relevant data from the LLDB output
     """
-    REGISTERS_PATTERN = r"(r..?) = (0x[0-9a-f]{16})"
+    REGISTERS_PATTERN = r"(r..?) = 0x0+([0-9a-f]+)"
     STOPPED_PATTERN = r"Process\s\d+\sexited\swith\sstatus\s=\s\d\s"
     LOCAL_VARIABLE_STORE_PATTERN = r"first = (\d+)[^.]*type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
     STACK_PATTERN = r"type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
@@ -27,7 +27,7 @@ class Parser():
         Returns:
           [reg, 0x...]
         """
-        return [(r[0], r[1]) for r in self.registers_regex.findall(output)]
+        return [(r[0], "0x{}".format(r[1])) for r in self.registers_regex.findall(output)]
 
     def parse_value_given_type(self, value_type, values):
         order = {"Int": 0, "Long": 1, "Float": 2, "Double": 3}

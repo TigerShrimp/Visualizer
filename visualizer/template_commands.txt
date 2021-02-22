@@ -1,7 +1,10 @@
-b Interpreter.cpp:30
+b Interpreter.cpp:32
 run ##PLACEHOLDER_CLASS_FILE##
-display i
-display pc
-define hook-stop
-  info registers
-end
+target stop-hook add
+register read
+frame variable state->stack
+frame variable state->locals
+frame variable state->method
+frame variable state->pc
+frame variable mnemonic
+DONE
