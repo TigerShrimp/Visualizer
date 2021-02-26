@@ -2,6 +2,7 @@ from constants import CMD_FILE_PATH
 from subprocess import PIPE, Popen
 from queue import Empty, Queue
 from threading import Thread
+import re
 
 
 class LLDB():
@@ -11,20 +12,30 @@ class LLDB():
     care of reading and writing to LLDB.
     """
 
+    WRITE_DONE_PATTERN = r"Target \d+: \(TigerShrimp\) stopped\."
+    PROCESS_DONE_PATTERN = r"Process \d+ exited with status = \d+ "
+
     def __init__(self):
-        pass
+        self.write_done_regex = re.compile(LLDB.WRITE_DONE_PATTERN)
+        self.process_done_regex = re.compile(LLDB.PROCESS_DONE_PATTERN)
+
+    def writing_done(self, lines):
+        return [line for line in lines[-3:]
+                if self.write_done_regex.match(line) or
+                self.process_done_regex.match(line)] and \
+            self.reader.empty()
 
     def read(self):
         """
         Returns:
           The contents written by the lldb to stdout since last read
         """
-        lines = ""
+        lines = []
         while True:
             line = self.reader.readline()
-            lines += line
-            if "(lldb)" in lines[:-3] and self.reader.empty():
-                return lines
+            lines.append(line)
+            if self.writing_done(lines):
+                return "".join(lines)
 
     def write(self, command):
         """ Writes to stdin of the lldb process and flushes the write buffer.
@@ -40,22 +51,12 @@ class LLDB():
         """
         Starts the lldb subprocess and listens to its output to determine wether it started
         up without issues. If issues occurs with lldb, it will be restared until issues not
-        occur. (Runs lldb ../TracingJITCompiler/build/TigerShrimp -x "visualizer/commands.txt" -q --interpreter=mi)
+        occur. (Runs lldb ../TracingJITCompiler/build/TigerShrimp --source "visualizer/commands.txt")
         """
         cmd = ["lldb", "../TracingJITCompiler/build/TigerShrimp",
                "--source", CMD_FILE_PATH]
         self.lldb_process = Popen(cmd, stdout=PIPE, stdin=PIPE)
         self.reader = Reader(self.lldb_process)
-
-    def check_startup(self):
-        while True:
-            try:
-                line = self.reader.readline(timeout=1)
-            except Empty:
-                return False
-            else:
-                if "(lldb)" in line and self.reader.empty():
-                    return True
 
     def stop(self, force=False):
         self.lldb_process.stdin.close()
@@ -64,10 +65,6 @@ class LLDB():
             self.lldb_process.kill()
         else:
             self.lldb_process.wait()
-
-    def restart(self):
-        self.stop(force=True)
-        self.start()
 
 
 class Reader():

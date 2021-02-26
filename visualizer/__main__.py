@@ -18,6 +18,8 @@ def parse_args():
         description="visualizer: visualize run-time behavior of TigerShrimp's Tracing JIT Compiler")
     arg_parser.add_argument(
         "file", help="JVM class file that the JIT compiler should run", type=str)
+    arg_parser.add_argument(
+        "--asm", help="Predefined native code for program form (file.asm method_id trace_start trace_end)", nargs=4, type=str, default=[""])
     group = arg_parser.add_mutually_exclusive_group()
     group.add_argument(
         "--sleep", "-s", help="Sleep time between info frames, default 0.1", type=float, default=.1)
@@ -26,7 +28,7 @@ def parse_args():
     args = arg_parser.parse_args()
     classFile = args.file
     if classFile.endswith(".class"):
-        return classFile, args.sleep, args.manual
+        return " ".join([classFile] + args.asm), args.sleep, args.manual
     else:
         print("visualizer: {}error{}: given file should be an .class file".format(
             Color.RED, Color.END))
