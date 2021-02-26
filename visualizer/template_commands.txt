@@ -1,5 +1,4 @@
-b Interpreter.cpp:32
-run ##PLACEHOLDER_CLASS_FILE##
+b Interpreter.cpp:36
 target stop-hook add
 register read
 frame variable state->stack
@@ -8,3 +7,4 @@ frame variable state->method
 frame variable state->pc
 frame variable mnemonic
 DONE
+run ##PLACEHOLDER_CLASS_FILE##

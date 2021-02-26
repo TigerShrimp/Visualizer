@@ -71,7 +71,7 @@ class Parser():
 
     def parse_interpreter_variable(self, output):
         """
-        regex.findAll returns a list of matches but we onyl have one which is
+        regex.findAll returns a list of matches but we only have one which is
         why we extract the first argument. 
 
         Args: 
@@ -112,7 +112,7 @@ class Parser():
                 stack = self.parse_stack_values(chunk)
             elif "state->locals" in chunk:
                 local_variables = self.parse_local_variables(chunk)
-            elif any([var in chunk for var in ["state->method = ", "state->pc = ", "(Mnemonic) mnemonic = "]]):
+            elif any([var in chunk for var in ["(size_t) state->method = ", "(size_t) state->pc = ", "(Mnemonic) mnemonic = "]]):
                 interpreter_variables.append(
                     self.parse_interpreter_variable(chunk))
 
