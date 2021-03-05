@@ -1,10 +1,11 @@
-b Interpreter.cpp:36
+b RunTime.cpp:20
+type summ add -v --summary-string "(Mnemonic) mnemonic = ${var}" Mnemonic
 target stop-hook add
 register read
 frame variable state->stack
 frame variable state->locals
 frame variable state->method
 frame variable state->pc
-frame variable mnemonic
+p static_cast<Mnemonic>(program->methods[state->method].code[state->pc])
 DONE
 run ##PLACEHOLDER_CLASS_FILE##
