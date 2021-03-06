@@ -57,9 +57,9 @@ def main():
         while not stopped:
             lldb.write("continue\n")
             output = lldb.read()
-            registers, stack, local_variables, interpreter_variables, stopped = parser.parse(
+            registers, stack, local_variables, interpreter_variables, loop_record, stopped = parser.parse(
                 output)
-            state.update(registers, interpreter_variables,
+            state.update(registers, interpreter_variables, loop_record,
                          local_variables, stack)
             printer.print(state)
             if manual:

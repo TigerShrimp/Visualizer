@@ -22,6 +22,7 @@ class State:
                                "rbp", "rsp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
         self.interpreter_state = []
         self.variable_store = []
+        self.loop_record = []
         self.stack = []
 
     def update_registers(self, to_update):
@@ -34,6 +35,10 @@ class State:
         if to_update:
             self.interpreter_state = to_update.copy()
 
+    def update_loop_record(self, to_update):
+        if to_update:
+            self.loop_record = to_update.copy()
+
     def update_variable_store(self, to_update):
         if to_update:
             self.variable_store = to_update.copy()
@@ -42,9 +47,10 @@ class State:
         if to_update != None:
             self.stack = list(reversed(to_update.copy()))
 
-    def update(self, regs, interpreter, variables, stack):
+    def update(self, regs, interpreter, record, variables, stack):
         self.update_registers(regs)
         self.update_interpreter_state(interpreter)
+        self.update_loop_record(record)
         self.update_variable_store(variables)
         self.update_stack(stack)
 

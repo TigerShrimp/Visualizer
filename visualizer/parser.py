@@ -7,14 +7,16 @@ class Parser():
     REGISTERS_PATTERN = r"(r..?) = 0x0+([0-9a-f]+)"
     STOPPED_PATTERN = r"Process\s\d+\sexited\swith\sstatus\s=\s\d\s"
     LOCAL_VARIABLE_STORE_PATTERN = r"first = (\d+)[^.]*type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
+    PROFILE_RECORD_PATTERN = r"method = (\d+)\n.*pc = (\d+)\n.*second = (\d+)"
     STACK_PATTERN = r"type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
-    INTERPRETER_VARS_PATTERN = r"\([^)]+\) ([a-zA-Z0-9->]+) = ([^\n]+)"
+    INTERPRETER_VARS_PATTERN = r"\([^)]+\) ([a-zA-Z0-9->]+) = ([a-zA-Z_0-9]+)"
 
     def __init__(self):
         self.registers_regex = re.compile(Parser.REGISTERS_PATTERN)
         self.stopped_regex = re.compile(Parser.STOPPED_PATTERN)
         self.local_variable_store_regex = re.compile(
             Parser.LOCAL_VARIABLE_STORE_PATTERN)
+        self.profile_record_regex = re.compile(Parser.PROFILE_RECORD_PATTERN)
         self.stack_regex = re.compile(Parser.STACK_PATTERN)
         self.interpreter_var_regex = re.compile(
             Parser.INTERPRETER_VARS_PATTERN)
@@ -79,7 +81,13 @@ class Parser():
         Returns: 
           Tuple of name and value of an interpreter variable. 
         """
-        return self.interpreter_var_regex.findall(output)[0]
+        return self.interpreter_var_regex.findall(output)
+
+    def parse_profile_record(self, output):
+        record = []
+        for match in self.profile_record_regex.findall(output):
+            record.append(("({}, {})".format(match[0], match[1]), match[2]))
+        return record
 
     def parse_stopped(self, output):
         """ Parses text in the form \"Process #### exited with status = #"\"
@@ -105,6 +113,7 @@ class Parser():
         stack = None
         local_variables = None
         interpreter_variables = []
+        loop_record = []
         for chunk in chunks:
             if "General Purpose Registers:" in chunk:
                 registers = self.parse_registers(chunk)
@@ -112,9 +121,11 @@ class Parser():
                 stack = self.parse_stack_values(chunk)
             elif "state->locals" in chunk:
                 local_variables = self.parse_local_variables(chunk)
-            elif any([var in chunk for var in ["(size_t) state->method = ", "(size_t) state->pc = ", "(Mnemonic) mnemonic = "]]):
-                interpreter_variables.append(
+            elif "profiler.loopRecord" in chunk:
+                loop_record = self.parse_profile_record(chunk)
+            elif any([var in chunk for var in ["(ProgramCounter) state->pc = ", "(Mnemonic) mnemonic = "]]):
+                interpreter_variables.extend(
                     self.parse_interpreter_variable(chunk))
 
         stopped = self.parse_stopped(output)
-        return registers, stack, local_variables, interpreter_variables, stopped
+        return registers, stack, local_variables, interpreter_variables, loop_record, stopped
