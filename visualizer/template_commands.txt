@@ -1,4 +1,7 @@
-b RunTime.cpp:20
+
+
+b RunTime.cpp:41
+
 type summ add -v --summary-string "(Mnemonic) mnemonic = ${var}" JVM::Mnemonic
 type summ add -v --summary-string "\n(size_t) method = ${var.methodIndex}\n(size_t) pc = ${var.instructionIndex}\n" ProgramCounter
 target stop-hook add
@@ -7,6 +10,10 @@ frame variable state->stack
 frame variable state->locals
 frame variable state->pc
 frame variable profiler.loopRecord
+script from type_parsers import op_parse, value_parse
+type summary add -F value_parse Value
+type summary add -F op_parse Op
+frame variable compiler.nativeTrace
 p static_cast<JVM::Mnemonic>(program->methods[state->pc.methodIndex].code[state->pc.instructionIndex])
 DONE
-run ##PLACEHOLDER_CLASS_FILE##
+run 
