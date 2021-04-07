@@ -1,19 +1,28 @@
-
-
+b RunTime.cpp:16
+b RunTime.cpp:23
+b RunTime.cpp:32
 b RunTime.cpp:41
-
+b RunTime.cpp:45
+type summary add --summary-string "${*var}" "CPInfo *"
+type summary add --summary-string "${var.bytes}" ConstantUtf8 ConstantInteger
 type summ add -v --summary-string "(Mnemonic) mnemonic = ${var}" JVM::Mnemonic
 type summ add -v --summary-string "\n(size_t) method = ${var.methodIndex}\n(size_t) pc = ${var.instructionIndex}\n" ProgramCounter
+script from type_parsers import op_parse, value_parse, inst_parse, byte_code_parse, record_entry_parse, pc_parse
+type summary add -F pc_parse ProgramCounter
+type summary add -F value_parse Value
+type summary add -F op_parse Op
+type summary add -F inst_parse Instruction
+type summary add -F byte_code_parse ByteCodeInstruction
+type summary add -F record_entry_parse RecordEntry
+run 
+p program->programString()
 target stop-hook add
 register read
 frame variable state->stack
 frame variable state->locals
 frame variable state->pc
 frame variable profiler.loopRecord
-script from type_parsers import op_parse, value_parse
-type summary add -F value_parse Value
-type summary add -F op_parse Op
 frame variable compiler.nativeTrace
+p traceRecorder.getRecording()
 p static_cast<JVM::Mnemonic>(program->methods[state->pc.methodIndex].code[state->pc.instructionIndex])
 DONE
-run 

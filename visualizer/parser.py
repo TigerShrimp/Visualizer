@@ -6,20 +6,21 @@ class Parser():
     """
     REGISTERS_PATTERN = r"(r..?) = 0x0+([0-9a-f]+)"
     STOPPED_PATTERN = r"Process\s\d+\sexited\swith\sstatus\s=\s\d\s"
-    LOCAL_VARIABLE_STORE_PATTERN = r"first = (\d+)[^.]*type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
-    PROFILE_RECORD_PATTERN = r"method = (\d+)\n.*pc = (\d+)\n.*second = (\d+)"
-    STACK_PATTERN = r"type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
-    INTERPRETER_VARS_PATTERN = r"\([^)]+\) ([a-zA-Z0-9->]+) = ([a-zA-Z_0-9]+)"
+    # LOCAL_VARIABLE_STORE_PATTERN = r"first = (\d+)[^.]*type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
+    # PROFILE_RECORD_PATTERN = r"method = (\d+)\n.*pc = (\d+)\n.*second = (\d+)"
+    # STACK_PATTERN = r"type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
+    # INTERPRETER_VARS_PATTERN = r"\([^)]+\) ([a-zA-Z0-9->]+) = ([a-zA-Z_0-9]+)"
+
+    MAP_PATTERN = r"\[\d+\] = \(first = (\d+), second = (-?[\d.]+)"
+    PAIR_MAP_PATTERN = r"\(([\d]+), ([\d]+)\)\D*(\d+)*"
+    LIST_PATTERN = r"\[\d+\] = ([^\n]*)"
 
     def __init__(self):
         self.registers_regex = re.compile(Parser.REGISTERS_PATTERN)
         self.stopped_regex = re.compile(Parser.STOPPED_PATTERN)
-        self.local_variable_store_regex = re.compile(
-            Parser.LOCAL_VARIABLE_STORE_PATTERN)
-        self.profile_record_regex = re.compile(Parser.PROFILE_RECORD_PATTERN)
-        self.stack_regex = re.compile(Parser.STACK_PATTERN)
-        self.interpreter_var_regex = re.compile(
-            Parser.INTERPRETER_VARS_PATTERN)
+        self.map_regex = re.compile(Parser.MAP_PATTERN)
+        self.pair_map_regex = re.compile(Parser.PAIR_MAP_PATTERN)
+        self.list_regex = re.compile(Parser.LIST_PATTERN)
 
     def parse_registers(self, output):
         """ Parses registers in the form \"reg = 0x...\"
@@ -50,7 +51,7 @@ class Parser():
            variables in the variable store, identifier and value
         """
         variables = []
-        for match in self.local_variable_store_regex.findall(output):
+        for match in self.map_regex.findall(output):
             ident = match[0]
             value = self.parse_value_given_type(match[1], match[2])
             variables.append((ident, value))
@@ -81,7 +82,7 @@ class Parser():
         Returns: 
           Tuple of name and value of an interpreter variable. 
         """
-        return self.interpreter_var_regex.findall(output)
+        return self.pair_map_regex.findall(output)
 
     def parse_profile_record(self, output):
         record = []
