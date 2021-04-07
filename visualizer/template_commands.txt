@@ -14,8 +14,8 @@ type summary add -F op_parse Op
 type summary add -F inst_parse Instruction
 type summary add -F byte_code_parse ByteCodeInstruction
 type summary add -F record_entry_parse RecordEntry
-run 
-p program->programString()
+run
+p constructProgramString(program)
 target stop-hook add
 register read
 frame variable state->stack
