@@ -20,10 +20,13 @@ class State:
         }
         self.register_names = ["rax", "rcx", "rdx", "rbx", "rdi", "rsi",
                                "rbp", "rsp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
-        self.interpreter_state = []
+        self.pc = None
         self.variable_store = []
         self.loop_record = []
         self.stack = []
+
+    def set_methods(self, methods):
+        self.methods = methods
 
     def update_registers(self, to_update):
         if to_update:
@@ -31,9 +34,9 @@ class State:
                 if k in self.registers:
                     self.registers[k] = v
 
-    def update_interpreter_state(self, to_update):
+    def update_pc(self, to_update):
         if to_update:
-            self.interpreter_state = to_update.copy()
+            self.pc = to_update
 
     def update_loop_record(self, to_update):
         if to_update:
@@ -47,12 +50,12 @@ class State:
         if to_update != None:
             self.stack = list(reversed(to_update.copy()))
 
-    def update(self, regs, interpreter, record, variables, stack):
+    def update(self, regs, pc, record, variables, stack):
         self.update_registers(regs)
-        self.update_interpreter_state(interpreter)
+        self.update_pc(pc)
         self.update_loop_record(record)
         self.update_variable_store(variables)
         self.update_stack(stack)
 
     def get_reg(self, index):
-        return (self.register_names[index], self.registers[self.register_names[index]])
+        return (self.register_names[index], self.registers[self.register_names[index]]) if self.register_names[index] else None

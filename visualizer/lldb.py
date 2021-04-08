@@ -14,15 +14,18 @@ class LLDB():
 
     WRITE_DONE_PATTERN = r"Target \d+: \(TigerShrimp\) stopped\."
     PROCESS_DONE_PATTERN = r"Process \d+ exited with status = \d+ "
+    STOP_HOOK_PATTERN = r"Stop hook #\d+ added."
 
     def __init__(self):
         self.write_done_regex = re.compile(LLDB.WRITE_DONE_PATTERN)
         self.process_done_regex = re.compile(LLDB.PROCESS_DONE_PATTERN)
+        self.stop_hook_regex = re.compile(LLDB.STOP_HOOK_PATTERN)
 
     def writing_done(self, lines):
         return [line for line in lines[-3:]
                 if self.write_done_regex.match(line) or
-                self.process_done_regex.match(line)] and \
+                self.process_done_regex.match(line) or
+                self.stop_hook_regex.match(line)] and \
             self.reader.empty()
 
     def read(self):

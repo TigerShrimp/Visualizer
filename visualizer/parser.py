@@ -11,9 +11,45 @@ class Parser():
     # STACK_PATTERN = r"type = ([A-Za-z]+)[^.]*val = \(([^\)]+)"
     # INTERPRETER_VARS_PATTERN = r"\([^)]+\) ([a-zA-Z0-9->]+) = ([a-zA-Z_0-9]+)"
 
-    MAP_PATTERN = r"\[\d+\] = \(first = (\d+), second = (-?[\d.]+)"
+    """
+    [0] = (first = 1, second = 2/ICONST)
+    matches are 1 and 2/ICONST
+    """
+    MAP_PATTERN = r"\[\d+\] = \(first = (\d+), second = ([^)]*)"
+    """
+    [0] = ((24, 1), first = 5)
+    matches are 24, 1 and 5
+    """
     PAIR_MAP_PATTERN = r"\(([\d]+), ([\d]+)\)\D*(\d+)*"
+    """
+    [0] = something
+    match is something
+    """
     LIST_PATTERN = r"\[\d+\] = ([^\n]*)"
+
+    """
+    [0] = {
+    first = "<init> (5)"
+    second = size=3 {
+      [0] = (first = 0, second = ALOAD_0)
+    }
+    match is:
+    first = "<init> (5)"
+    second = size=3 {
+      [0] = (first = 0, second = ALOAD_0)
+    """
+    CODE_PATTERN = r"\[\d+] = \{(.*?)}\n"
+
+    """
+    first = "main (23)"
+    match is main, 23
+    """
+    METHOD_ID_PATTERN = r"first = \"(.+?) \((\d+)\)"
+    """
+    Long console text, after reaching a breakpoint.
+    match is line number of breakpoint.
+    """
+    BREAKPOINT_PATTERN = r"TigerShrimp`RunTime::run\(this.*? at RunTime\.cpp:(\d+)"
 
     def __init__(self):
         self.registers_regex = re.compile(Parser.REGISTERS_PATTERN)
@@ -21,6 +57,23 @@ class Parser():
         self.map_regex = re.compile(Parser.MAP_PATTERN)
         self.pair_map_regex = re.compile(Parser.PAIR_MAP_PATTERN)
         self.list_regex = re.compile(Parser.LIST_PATTERN)
+        self.code_regex = re.compile(
+            Parser.CODE_PATTERN,  re.MULTILINE | re.DOTALL)
+        self.method_id_regex = re.compile(Parser.METHOD_ID_PATTERN)
+        self.breakpoint_regex = re.compile(Parser.BREAKPOINT_PATTERN)
+
+    def parse_code(self, output):
+        matches = self.code_regex.findall(output)
+        methods = {}
+        for match in matches:
+            method_id_match = self.method_id_regex.findall(match)[0]
+            method_match = self.map_regex.findall(match)
+            pc_conversion = {pc: index for (
+                index, (pc, _)) in enumerate(method_match)}
+
+            methods[method_id_match[1]] = (
+                method_id_match[0], pc_conversion, method_match)
+        return methods
 
     def parse_registers(self, output):
         """ Parses registers in the form \"reg = 0x...\"
@@ -32,9 +85,16 @@ class Parser():
         """
         return [(r[0], "0x{}".format(r[1])) for r in self.registers_regex.findall(output)]
 
-    def parse_value_given_type(self, value_type, values):
-        order = {"Int": 0, "Long": 1, "Float": 2, "Double": 3}
-        return values.split(',')[order[value_type]].split(' = ')[1]
+    def get_breakpoint(self, output):
+        """
+        Retreive the line number of the latest breakpoint stopped at.
+        Args:
+          output: output from LLDB after hitting a breakpoint
+        Returns:
+          line number of breakpoint or -1 if something went wrong
+        """
+        match = self.breakpoint_regex.findall(output)
+        return int(match[-1]) if match else -1
 
     def parse_local_variables(self, output):
         """ Parses the local variables map.
@@ -50,12 +110,7 @@ class Parser():
         Returns:
            variables in the variable store, identifier and value
         """
-        variables = []
-        for match in self.map_regex.findall(output):
-            ident = match[0]
-            value = self.parse_value_given_type(match[1], match[2])
-            variables.append((ident, value))
-        return variables
+        return [(match[0], match[1]) for match in self.map_regex.findall(output)]
 
     def parse_stack_values(self, output):
         """ Parses the values from the interpreter stack.
@@ -67,10 +122,7 @@ class Parser():
         Returns:
           List of the stack values
         """
-        stack = []
-        for match in self.stack_regex.findall(output):
-            stack.append(self.parse_value_given_type(match[0], match[1]))
-        return stack
+        return [match for match in self.list_regex.findall(output)]
 
     def parse_interpreter_variable(self, output):
         """
@@ -82,13 +134,10 @@ class Parser():
         Returns: 
           Tuple of name and value of an interpreter variable. 
         """
-        return self.pair_map_regex.findall(output)
+        return self.pair_map_regex.findall(output)[0]
 
     def parse_profile_record(self, output):
-        record = []
-        for match in self.profile_record_regex.findall(output):
-            record.append(("({}, {})".format(match[0], match[1]), match[2]))
-        return record
+        return {(match[0], match[1]): match[2] for match in self.pair_map_regex.findall(output)}
 
     def parse_stopped(self, output):
         """ Parses text in the form \"Process #### exited with status = #"\"
@@ -113,7 +162,7 @@ class Parser():
         registers = None
         stack = None
         local_variables = None
-        interpreter_variables = []
+        pc = None
         loop_record = []
         for chunk in chunks:
             if "General Purpose Registers:" in chunk:
@@ -124,9 +173,8 @@ class Parser():
                 local_variables = self.parse_local_variables(chunk)
             elif "profiler.loopRecord" in chunk:
                 loop_record = self.parse_profile_record(chunk)
-            elif any([var in chunk for var in ["(ProgramCounter) state->pc = ", "(Mnemonic) mnemonic = "]]):
-                interpreter_variables.extend(
-                    self.parse_interpreter_variable(chunk))
+            elif "(ProgramCounter) pc = " in chunk:
+                (m, pc, _) = self.parse_interpreter_variable(chunk)
+                pc = (m, pc)
 
-        stopped = self.parse_stopped(output)
-        return registers, stack, local_variables, interpreter_variables, loop_record, stopped
+        return registers, stack, local_variables, pc, loop_record

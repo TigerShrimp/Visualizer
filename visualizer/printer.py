@@ -15,8 +15,40 @@ class Printer():
     COLUMN_SPACING = '    '
 
     def __init__(self, height=8, strlen=24):
+        assert(height % 2 == 0)
         self.height = height
         self.strlen = strlen
+
+    def code_at(self, methods, pc, loop_record):
+        (method_index, instruction_index) = pc
+        (name, conversion, code) = methods[method_index]
+        inst_row = conversion[instruction_index]
+        output = [self.expand("{}:".format(name))]
+        if len(code) < self.height-1:
+            start = 0
+            stop = len(code)
+        else:
+            start = 0 if inst_row - \
+                (self.height-1) // 2 < 0 else inst_row - (self.height-1) // 2
+            stop = start + self.height-1
+            if stop > len(code):
+                start -= stop-len(code)
+                stop = len(code)
+        for (i, (inst, c)) in enumerate(code[start:stop]):
+            prefix = "-> " if i+start == inst_row else "   "
+            row = prefix + c
+            row = self.expand(row)
+            curr_pc = (method_index, inst)
+            if curr_pc in loop_record:
+                row = Color.RED + \
+                    row[:-(len(loop_record[curr_pc]))-len(Printer.COLUMN_SPACING)] + \
+                    loop_record[curr_pc] + Printer.COLUMN_SPACING + Color.END
+
+            output.append(row)
+            # Expand to always have self.height rows.
+        output += [self.expand("")]*(self.height - len(output))
+
+        return output
 
     def expand(self, string, columns=1):
         ''' Expands the given string with padding spaces to match strlen
@@ -61,17 +93,15 @@ class Printer():
         return len(lst) // self.height
 
     def construct_header(self, state):
-        register_header = self.expand('Registers', 2)
+        register_header = self.expand(
+            'Registers', self.columns(state.register_names))
 
-        interpreter_state_header = ''
-        if len(state.interpreter_state) > 0:
-            interpreter_state_header = self.expand(
-                'Interpreter State', self.columns(state.interpreter_state))
+        interpreter_state_header = self.expand('Code')
 
-        loop_record_header = ''
-        if len(state.loop_record) > 0:
-            loop_record_header = self.expand(
-                'Loop Record (method, pc)', self.columns(state.loop_record))
+        # loop_record_header = ''
+        # if len(state.loop_record) > 0:
+        #     loop_record_header = self.expand(
+        #         'Loop Record (method, pc)', self.columns(state.loop_record))
 
         variable_store_header = ''
         if len(state.variable_store) > 0:
@@ -80,7 +110,7 @@ class Printer():
 
         stack_header = 'Stack (Top {})'.format(self.height)
 
-        return Color.BOLD + register_header + interpreter_state_header + loop_record_header + variable_store_header + stack_header + Color.END + '\n'
+        return Color.BOLD + register_header + interpreter_state_header + variable_store_header + stack_header + Color.END + '\n'
 
     def print(self, state):
         ''' Clears the previous output and prints the given values in columns
@@ -90,19 +120,23 @@ class Printer():
         '''
         os.system('clear')
         print(self.construct_header(state))
-
+        code = self.code_at(state.methods, state.pc, state.loop_record)
         for i in range(self.height):
-            regstr1 = self.format_value(state.get_reg(i))
-            regstr2 = self.format_value(state.get_reg(i+self.height))
-            interpreter_varstr = ''
-            for j in range(self.columns(state.interpreter_state)):
-                interpreter_varstr += self.format_value(
-                    state.interpreter_state[i + (j*self.height)])
+            regstr = ''
+            for j in range(self.columns(state.register_names)):
+                regstr += self.format_value(state.get_reg(i+(j*self.height)))
 
-            loop_record_varstr = ''
-            for j in range(self.columns(state.loop_record)):
-                loop_record_varstr += self.format_value(
-                    state.loop_record[i+(j*self.height)])
+            # interpreter_varstr = ''
+            # for j in range(self.columns(state.interpreter_state)):
+            #     interpreter_varstr += self.format_value(
+            #         state.interpreter_state[i + (j*self.height)])
+
+            code_varstr = code[i]
+
+            # loop_record_varstr = ''
+            # for j in range(self.columns(state.loop_record)):
+            #     loop_record_varstr += self.format_value(
+            #         state.loop_record[i+(j*self.height)])
 
             local_varstr = ''
             for j in range(self.columns(state.variable_store)):
@@ -114,5 +148,4 @@ class Printer():
             else:
                 stack_str = state.stack[i]
 
-            print('{}{}{}{}{}{}'.format(regstr1, regstr2,
-                                        interpreter_varstr, loop_record_varstr, local_varstr, stack_str))
+            print('{}{}{}{}'.format(regstr, code_varstr, local_varstr, stack_str))

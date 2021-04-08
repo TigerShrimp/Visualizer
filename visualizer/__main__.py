@@ -5,7 +5,16 @@ from parser import Parser
 from state import State
 from printer import Printer
 from os import remove
-from time import sleep
+from time import sleep, time
+
+
+BREAKPOINTS = {
+    16: "BEFORE_RUN",
+    23: "NATIVE_TRACE",
+    32: "INIT_RECORDING",
+    41: "REC_COMPILE_DONE",
+    45: "INTERPRETER"
+}
 
 
 def parse_args():
@@ -38,36 +47,53 @@ def parse_args():
 def configure_gdb_commands_file(classFile):
     """ Puts the classFile into the list of commands to GDB
     """
+    breakpoints = "".join(["b RunTime.cpp:{}\n".format(bp)
+                           for bp in BREAKPOINTS])
     with open(TEMPLATE_CMD_FILE_PATH, 'r') as template_file, open(CMD_FILE_PATH, 'w') as cmd_file:
         contents = template_file.read()
         contents = contents.replace(CLASS_FILE_PLACEHOLDER, classFile)
-        cmd_file.write(contents)
+        cmd_file.write(breakpoints + contents)
 
 
 def main():
     classFile, sleepytime, manual = parse_args()
     configure_gdb_commands_file(classFile)
+    BREAKPOINTS[-1] = "NOT_FOUND"
     try:
         lldb = LLDB()
         parser = Parser()
         state = State()
-        printer = Printer()
+        printer = Printer(24)
         lldb.start()
-        stopped = None
-        while not stopped:
-            lldb.write("continue\n")
+        while True:
+            start_time = time()
             output = lldb.read()
-            registers, stack, local_variables, interpreter_variables, loop_record, stopped = parser.parse(
-                output)
-            state.update(registers, interpreter_variables, loop_record,
-                         local_variables, stack)
-            printer.print(state)
+            bp = BREAKPOINTS[parser.get_breakpoint(output)]
+            if bp == "BEFORE_RUN":
+                print("BEFORE_RUN")
+                state.set_methods(parser.parse_code(output))
+            elif bp == "NATIVE_TRACE":
+                print("NATIVE_TRACÉ")
+            elif bp == "INIT_RECORDING":
+                print("INIT_RECORDING")
+            elif bp == "REC_COMPILE_DONE":
+                print("REC_COMPILE_DONE")
+            elif bp == "INTERPRETER":
+                registers, stack, local_variables, pc, loop_record = parser.parse(
+                    output)
+                state.update(registers, pc, loop_record,
+                             local_variables, stack)
+                printer.print(state)
+            else:
+                break
             if manual:
                 input("Press ENTER to proceed")
             else:
-                sleep(sleepytime)
+                time_elapsed = time() - start_time
+                sleep(max(sleepytime - time_elapsed, 0))
+            lldb.write("continue\n")
     finally:
-        remove(CMD_FILE_PATH)
+        # remove(CMD_FILE_PATH)
         lldb.stop()
 
 

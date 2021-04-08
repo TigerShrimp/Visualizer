@@ -1,8 +1,3 @@
-b RunTime.cpp:16
-b RunTime.cpp:23
-b RunTime.cpp:32
-b RunTime.cpp:41
-b RunTime.cpp:45
 type summary add --summary-string "${*var}" "CPInfo *"
 type summary add --summary-string "${var.bytes}" ConstantUtf8 ConstantInteger
 type summ add -v --summary-string "(Mnemonic) mnemonic = ${var}" JVM::Mnemonic
@@ -14,13 +9,13 @@ type summary add -F op_parse Op
 type summary add -F inst_parse Instruction
 type summary add -F byte_code_parse ByteCodeInstruction
 type summary add -F record_entry_parse RecordEntry
-run
+run ##PLACEHOLDER_CLASS_FILE##
 p constructProgramString(program)
 target stop-hook add
 register read
 frame variable state->stack
 frame variable state->locals
-frame variable state->pc
+frame variable pc
 frame variable profiler.loopRecord
 frame variable compiler.nativeTrace
 p traceRecorder.getRecording()
