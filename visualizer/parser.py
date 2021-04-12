@@ -110,7 +110,7 @@ class Parser():
         Returns:
            variables in the variable store, identifier and value
         """
-        return [(match[0], match[1]) for match in self.map_regex.findall(output)]
+        return [("[{}]".format(match[0]), match[1]) for match in self.map_regex.findall(output)]
 
     def parse_stack_values(self, output):
         """ Parses the values from the interpreter stack.
@@ -164,6 +164,8 @@ class Parser():
         local_variables = None
         pc = None
         loop_record = []
+        recording = []
+        native_trace = []
         for chunk in chunks:
             if "General Purpose Registers:" in chunk:
                 registers = self.parse_registers(chunk)
@@ -173,8 +175,11 @@ class Parser():
                 local_variables = self.parse_local_variables(chunk)
             elif "profiler.loopRecord" in chunk:
                 loop_record = self.parse_profile_record(chunk)
+            elif "traceRecorder.recordedTrace" in chunk:
+                recording = [match for match in self.list_regex.findall(chunk)]
+            elif "compiler.nativeTrace" in chunk:
+                native_trace = [match for match in self.list_regex.findall(chunk)]
             elif "(ProgramCounter) pc = " in chunk:
                 (m, pc, _) = self.parse_interpreter_variable(chunk)
                 pc = (m, pc)
-
-        return registers, stack, local_variables, pc, loop_record
+        return registers, stack, local_variables, pc, loop_record, recording, native_trace

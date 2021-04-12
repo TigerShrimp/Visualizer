@@ -1,5 +1,6 @@
 import os
-from constants import Color
+from constants import Color, CompilerState
+from random import getrandbits
 
 
 class Printer():
@@ -19,7 +20,7 @@ class Printer():
         self.height = height
         self.strlen = strlen
 
-    def code_at(self, methods, pc, loop_record):
+    def code_at(self, methods, pc, state):
         (method_index, instruction_index) = pc
         (name, conversion, code) = methods[method_index]
         inst_row = conversion[instruction_index]
@@ -39,10 +40,12 @@ class Printer():
             row = prefix + c
             row = self.expand(row)
             curr_pc = (method_index, inst)
-            if curr_pc in loop_record:
+            if curr_pc in state.loop_record:
                 row = Color.RED + \
-                    row[:-(len(loop_record[curr_pc]))-len(Printer.COLUMN_SPACING)] + \
-                    loop_record[curr_pc] + Printer.COLUMN_SPACING + Color.END
+                    row[:-(len(state.loop_record[curr_pc]))-len(Printer.COLUMN_SPACING)] + \
+                    state.loop_record[curr_pc] + Printer.COLUMN_SPACING + Color.END
+            elif curr_pc in state.record_record:
+                row = Color.MAGENTA + row + Color.END
 
             output.append(row)
             # Expand to always have self.height rows.
@@ -92,7 +95,7 @@ class Printer():
             lst.extend([None]*(self.height-rem))
         return len(lst) // self.height
 
-    def construct_header(self, state):
+    def construct_first_header(self, state):
         register_header = self.expand(
             'Registers', self.columns(state.register_names))
 
@@ -112,6 +115,18 @@ class Printer():
 
         return Color.BOLD + register_header + interpreter_state_header + variable_store_header + stack_header + Color.END + '\n'
 
+    def construct_second_header(self, state):
+        record_header = self.expand(
+            'Recording', self.columns(state.recording))
+
+        compiled_state_header = self.expand('Compiled Trace') if state.compiler_state == CompilerState.COMPILING else ''
+
+        return Color.BOLD + record_header + compiled_state_header + Color.END + '\n'
+
+    def construct_headest(self, state):
+        return Color.BLUE + Color.BOLD + "".join([x.lower() if getrandbits(1) else x for x in state.compiler_state]) + Color.END + "\n"
+
+
     def print(self, state):
         ''' Clears the previous output and prints the given values in columns
 
@@ -119,8 +134,10 @@ class Printer():
           state - see class in state.py
         '''
         os.system('clear')
-        print(self.construct_header(state))
-        code = self.code_at(state.methods, state.pc, state.loop_record)
+        print(self.construct_headest(state))
+        print(self.construct_first_header(state))
+        code = self.code_at(state.methods, state.pc, state)
+        # First set of columns
         for i in range(self.height):
             regstr = ''
             for j in range(self.columns(state.register_names)):
@@ -149,3 +166,20 @@ class Printer():
                 stack_str = state.stack[i]
 
             print('{}{}{}{}'.format(regstr, code_varstr, local_varstr, stack_str))
+
+        # Second set of columns        
+        if state.compiler_state in [CompilerState.RECORDING, CompilerState.COMPILING]:
+            print()
+            print(self.construct_second_header(state))
+            for i in range(self.height):
+                record_str = ''
+                for j in range(self.columns(state.recording)):
+                    record_str += self.expand(state.recording[i+self.height*j] if state.recording[i+self.height*j] else '')
+
+                # TODO: print compiled if applicable
+                native_str = ''
+                if(state.compiler_state == CompilerState.COMPILING):
+                    for j in range(self.columns(state.native_trace)):
+                        native_str += self.expand(state.native_trace[i+self.height*j] if state.native_trace[i+self.height*j] else '')
+                
+                print('{}{}'.format(record_str, native_str))               

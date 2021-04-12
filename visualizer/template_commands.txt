@@ -18,6 +18,5 @@ frame variable state->locals
 frame variable pc
 frame variable profiler.loopRecord
 frame variable compiler.nativeTrace
-p traceRecorder.getRecording()
-p static_cast<JVM::Mnemonic>(program->methods[state->pc.methodIndex].code[state->pc.instructionIndex])
+frame variable traceRecorder.recordedTrace
 DONE

@@ -14,10 +14,16 @@ def value_parse(valobj, internal_dict):
         val = valobj.GetChildMemberWithName(
             'val').GetChildMemberWithName('intValue').GetValue()
     elif t == 'Double':
-        val = val = valobj.GetChildMemberWithName(
+        val = valobj.GetChildMemberWithName(
             'val').GetChildMemberWithName('doubleValue').GetValue()
-    else:
-        val = "Add parse for type {}".format(t)
+    elif t == 'Long':
+        val = valobj.GetChildMemberWithName(
+            'val').GetChildMemberWithName('longValue').GetValue()
+    elif t == 'Float':
+        val = valobj.GetChildMemberWithName(
+            'val').GetChildMemberWithName('floatValue').GetValue()
+    else: 
+        val = "Add parse for type {}".format(t) 
     return str(val)
 
 

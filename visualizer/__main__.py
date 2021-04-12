@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from constants import CLASS_FILE_PLACEHOLDER, Color, CMD_FILE_PATH, TEMPLATE_CMD_FILE_PATH
+from constants import CLASS_FILE_PLACEHOLDER, Color, CMD_FILE_PATH, TEMPLATE_CMD_FILE_PATH, CompilerState
 from lldb import LLDB
 from parser import Parser
 from state import State
@@ -10,7 +10,7 @@ from time import sleep, time
 
 BREAKPOINTS = {
     16: "BEFORE_RUN",
-    23: "NATIVE_TRACE",
+    24: "NATIVE_TRACE",
     32: "INIT_RECORDING",
     41: "REC_COMPILE_DONE",
     45: "INTERPRETER"
@@ -66,34 +66,45 @@ def main():
         printer = Printer(24)
         lldb.start()
         while True:
+            stop_reason = ''
             start_time = time()
             output = lldb.read()
+            registers, stack, local_variables, pc, loop_record, recording, native_trace = parser.parse(
+                    output)
+            state.update(registers, pc, loop_record, local_variables, stack, recording, native_trace)
             bp = BREAKPOINTS[parser.get_breakpoint(output)]
             if bp == "BEFORE_RUN":
                 print("BEFORE_RUN")
                 state.set_methods(parser.parse_code(output))
+                lldb.write("continue\n")
+                continue
             elif bp == "NATIVE_TRACE":
-                print("NATIVE_TRACÉ")
+                state.compiler_state = CompilerState.NATIVE
+                stop_reason = "Reached loop header with compiled trace"
             elif bp == "INIT_RECORDING":
-                print("INIT_RECORDING")
+                state.compiler_state = CompilerState.RECORDING
             elif bp == "REC_COMPILE_DONE":
-                print("REC_COMPILE_DONE")
+                stop_reason = "Compilation of trace finished"
+                state.compiler_state = CompilerState.COMPILING
             elif bp == "INTERPRETER":
-                registers, stack, local_variables, pc, loop_record = parser.parse(
-                    output)
-                state.update(registers, pc, loop_record,
-                             local_variables, stack)
-                printer.print(state)
+                if state.compiler_state == CompilerState.NATIVE:
+                    state.compiler_state = CompilerState.INTERPRETING
+                    stop_reason = "Exited trace, will continue interpret here"
             else:
                 break
-            if manual:
-                input("Press ENTER to proceed")
+            if state.compiler_state == CompilerState.RECORDING:
+                state.record_record.add(pc)
+
+            printer.print(state)
+            if manual or stop_reason:
+                print()
+                input(stop_reason + " -- Press ENTER to proceed")
             else:
                 time_elapsed = time() - start_time
                 sleep(max(sleepytime - time_elapsed, 0))
             lldb.write("continue\n")
     finally:
-        # remove(CMD_FILE_PATH)
+        remove(CMD_FILE_PATH)
         lldb.stop()
 
 
