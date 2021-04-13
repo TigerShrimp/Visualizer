@@ -43,7 +43,8 @@ class Printer():
             if curr_pc in state.loop_record:
                 row = Color.RED + \
                     row[:-(len(state.loop_record[curr_pc]))-len(Printer.COLUMN_SPACING)] + \
-                    state.loop_record[curr_pc] + Printer.COLUMN_SPACING + Color.END
+                    state.loop_record[curr_pc] + \
+                    Printer.COLUMN_SPACING + Color.END
             elif curr_pc in state.record_record:
                 row = Color.MAGENTA + row + Color.END
 
@@ -101,11 +102,6 @@ class Printer():
 
         interpreter_state_header = self.expand('Code')
 
-        # loop_record_header = ''
-        # if len(state.loop_record) > 0:
-        #     loop_record_header = self.expand(
-        #         'Loop Record (method, pc)', self.columns(state.loop_record))
-
         variable_store_header = ''
         if len(state.variable_store) > 0:
             variable_store_header = self.expand(
@@ -119,13 +115,13 @@ class Printer():
         record_header = self.expand(
             'Recording', self.columns(state.recording))
 
-        compiled_state_header = self.expand('Compiled Trace') if state.compiler_state == CompilerState.COMPILING else ''
+        compiled_state_header = self.expand(
+            'Compiled Trace') if state.compiler_state == CompilerState.COMPILING else ''
 
         return Color.BOLD + record_header + compiled_state_header + Color.END + '\n'
 
     def construct_headest(self, state):
-        return Color.BLUE + Color.BOLD + "".join([x.lower() if getrandbits(1) else x for x in state.compiler_state]) + Color.END + "\n"
-
+        return Color.BLUE + Color.BOLD + state.compiler_state + Color.END + "\n"
 
     def print(self, state):
         ''' Clears the previous output and prints the given values in columns
@@ -167,19 +163,20 @@ class Printer():
 
             print('{}{}{}{}'.format(regstr, code_varstr, local_varstr, stack_str))
 
-        # Second set of columns        
+        # Second set of columns
         if state.compiler_state in [CompilerState.RECORDING, CompilerState.COMPILING]:
             print()
             print(self.construct_second_header(state))
             for i in range(self.height):
                 record_str = ''
                 for j in range(self.columns(state.recording)):
-                    record_str += self.expand(state.recording[i+self.height*j] if state.recording[i+self.height*j] else '')
+                    record_str += self.expand(
+                        state.recording[i+self.height*j] if state.recording[i+self.height*j] else '')
 
-                # TODO: print compiled if applicable
                 native_str = ''
                 if(state.compiler_state == CompilerState.COMPILING):
                     for j in range(self.columns(state.native_trace)):
-                        native_str += self.expand(state.native_trace[i+self.height*j] if state.native_trace[i+self.height*j] else '')
-                
-                print('{}{}'.format(record_str, native_str))               
+                        native_str += self.expand(
+                            state.native_trace[i+self.height*j] if state.native_trace[i+self.height*j] else '')
+
+                print('{}{}'.format(record_str, native_str))

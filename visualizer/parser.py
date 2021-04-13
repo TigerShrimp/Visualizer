@@ -178,7 +178,8 @@ class Parser():
             elif "traceRecorder.recordedTrace" in chunk:
                 recording = [match for match in self.list_regex.findall(chunk)]
             elif "compiler.nativeTrace" in chunk:
-                native_trace = [match for match in self.list_regex.findall(chunk)]
+                native_trace = [
+                    match for match in self.list_regex.findall(chunk)]
             elif "(ProgramCounter) pc = " in chunk:
                 (m, pc, _) = self.parse_interpreter_variable(chunk)
                 pc = (m, pc)

@@ -70,8 +70,9 @@ def main():
             start_time = time()
             output = lldb.read()
             registers, stack, local_variables, pc, loop_record, recording, native_trace = parser.parse(
-                    output)
-            state.update(registers, pc, loop_record, local_variables, stack, recording, native_trace)
+                output)
+            state.update(registers, pc, loop_record,
+                         local_variables, stack, recording, native_trace)
             bp = BREAKPOINTS[parser.get_breakpoint(output)]
             if bp == "BEFORE_RUN":
                 print("BEFORE_RUN")

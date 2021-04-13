@@ -1,5 +1,6 @@
 from constants import CompilerState
 
+
 class State:
     def __init__(self):
         self.registers = {
@@ -55,7 +56,7 @@ class State:
     def update_stack(self, to_update):
         if to_update != None:
             self.stack = list(reversed(to_update.copy()))
-        
+
     def update_recording(self, to_update):
         if to_update:
             self.recording = to_update.copy()

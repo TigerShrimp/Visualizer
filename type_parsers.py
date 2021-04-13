@@ -22,8 +22,8 @@ def value_parse(valobj, internal_dict):
     elif t == 'Float':
         val = valobj.GetChildMemberWithName(
             'val').GetChildMemberWithName('floatValue').GetValue()
-    else: 
-        val = "Add parse for type {}".format(t) 
+    else:
+        val = "Add parse for type {}".format(t)
     return str(val)
 
 

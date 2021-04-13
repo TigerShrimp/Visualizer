@@ -12,6 +12,7 @@ class Color:
     END = '\033[0m'
     TITLE = UNDERLINE + BOLD + BLUE
 
+
 class CompilerState:
     INTERPRETING = "INTERPRETING"
     RECORDING = "RECORDING TRACE"
