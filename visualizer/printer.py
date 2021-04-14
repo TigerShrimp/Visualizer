@@ -121,7 +121,9 @@ class Printer():
         return Color.BOLD + record_header + compiled_state_header + Color.END + '\n'
 
     def construct_headest(self, state):
-        return Color.BLUE + Color.BOLD + state.compiler_state + Color.END + "\n"
+        return Color.BLUE + Color.BOLD + state.compiler_state + Color.END + '\n'
+        # return Color.BLUE + Color.BOLD + "".join([x.lower() if getrandbits(1) else x for x in state.compiler_state]) + Color.END + "\n"
+
 
     def print(self, state):
         ''' Clears the previous output and prints the given values in columns
