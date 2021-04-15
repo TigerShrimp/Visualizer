@@ -10,11 +10,11 @@ from time import sleep, time
 
 BREAKPOINTS = {
     17: "BEFORE_RUN",
-    26: "NATIVE_TRACE",
-    33: "INIT_RECORDING",
-    44: "INIT_RECORDING",
-    53: "REC_COMPILE_DONE",
-    59: "INTERPRETER"
+    36: "NATIVE_TRACE",
+    43: "INIT_RECORDING",
+    55: "INIT_RECORDING",
+    31: "REC_COMPILE_DONE",
+    61: "INTERPRETER"
 }
 
 
@@ -85,6 +85,8 @@ def main():
                 stop_reason = "Reached loop header with compiled trace"
             elif bp == "INIT_RECORDING":
                 state.compiler_state = CompilerState.RECORDING
+                stop_reason = "Hot loop header or side exit reached, recording will start"
+                state.recording = []
             elif bp == "REC_COMPILE_DONE":
                 stop_reason = "Compilation of trace finished"
                 state.compiler_state = CompilerState.COMPILING
