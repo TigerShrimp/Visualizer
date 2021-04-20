@@ -10,7 +10,7 @@ from time import sleep, time
 
 BREAKPOINTS = {
     17: "BEFORE_RUN",
-    36: "NATIVE_TRACE",
+    35: "NATIVE_TRACE",
     43: "INIT_RECORDING",
     55: "INIT_RECORDING",
     31: "REC_COMPILE_DONE",
@@ -72,6 +72,8 @@ def main():
             output = lldb.read()
             registers, stack, local_variables, pc, loop_record, recording, native_trace = parser.parse(
                 output)
+            if not state.loop_record and loop_record:
+                stop_reason = 'Profiler found potential loop header, iterations in loop indicated'
             state.update(registers, pc, loop_record,
                          local_variables, stack, recording, native_trace)
             bp = BREAKPOINTS[parser.get_breakpoint(output)]
