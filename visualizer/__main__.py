@@ -10,10 +10,9 @@ from time import sleep, time
 
 BREAKPOINTS = {
     17: "BEFORE_RUN",
-    35: "NATIVE_TRACE",
-    43: "INIT_RECORDING",
-    55: "INIT_RECORDING",
     31: "REC_COMPILE_DONE",
+    35: "NATIVE_TRACE",
+    55: "INIT_RECORDING",
     61: "INTERPRETER"
 }
 
