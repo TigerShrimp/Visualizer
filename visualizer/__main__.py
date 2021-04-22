@@ -88,6 +88,7 @@ def main():
                 state.compiler_state = CompilerState.RECORDING
                 stop_reason = "Hot loop header or side exit reached, recording will start"
                 state.recording = []
+                state.native_trace = []
             elif bp == "REC_COMPILE_DONE":
                 stop_reason = "Compilation of trace finished"
                 state.compiler_state = CompilerState.COMPILING

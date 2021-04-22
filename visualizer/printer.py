@@ -107,7 +107,7 @@ class Printer():
             variable_store_header = self.expand(
                 'Local Variable Store', self.columns(state.variable_store))
 
-        stack_header = 'Stack (Top {})'.format(self.height)
+        stack_header = 'Stack (Top {})'.format(min(self.height,8) )
 
         return Color.BOLD + register_header + interpreter_state_header + variable_store_header + stack_header + Color.END + '\n'
 
@@ -158,27 +158,30 @@ class Printer():
                 local_varstr += self.format_value(
                     state.variable_store[i + (j*self.height)])
 
-            if i >= len(state.stack):
+            if i < len(state.stack) and i < 8:
+                stack_str = state.stack[i]
+            elif i < 8:
                 stack_str = '-'
             else:
-                stack_str = state.stack[i]
+                stack_str = ''
 
             print('{}{}{}{}'.format(regstr, code_varstr, local_varstr, stack_str))
 
         # Second set of columns
         if state.compiler_state in [CompilerState.RECORDING, CompilerState.COMPILING]:
+            snd_height = min(self.height, max(len(state.recording), len(state.native_trace) if state.compiler_state == CompilerState.COMPILING else 0))
             print()
             print(self.construct_second_header(state))
-            for i in range(self.height):
+            for i in range(snd_height):
                 record_str = ''
                 for j in range(self.columns(state.recording)):
                     record_str += self.expand(
-                        state.recording[i+self.height*j] if state.recording[i+self.height*j] else '')
+                        state.recording[i+snd_height*j] if state.recording[i+snd_height*j] else '')
 
                 native_str = ''
                 if(state.compiler_state == CompilerState.COMPILING):
                     for j in range(self.columns(state.native_trace)):
                         native_str += self.expand(
-                            state.native_trace[i+self.height*j] if state.native_trace[i+self.height*j] else '')
+                            state.native_trace[i+snd_height*j] if state.native_trace[i+snd_height*j] else '')
 
                 print('{}{}'.format(record_str, native_str))
