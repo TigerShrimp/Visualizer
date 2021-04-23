@@ -124,6 +124,8 @@ class Printer():
         return Color.BLUE + Color.BOLD + state.compiler_state + Color.END + '\n'
         # return Color.BLUE + Color.BOLD + "".join([x.lower() if getrandbits(1) else x for x in state.compiler_state]) + Color.END + "\n"
 
+    def get_line_nr(self, index):
+        return (" {}" if index+1 < 10 else "{}").format(index+1)
 
     def print(self, state):
         ''' Clears the previous output and prints the given values in columns
@@ -176,12 +178,12 @@ class Printer():
                 record_str = ''
                 for j in range(self.columns(state.recording)):
                     record_str += self.expand(
-                        state.recording[i+snd_height*j] if state.recording[i+snd_height*j] else '')
+                        "{}: {}".format(self.get_line_nr(i+snd_height*j),state.recording[i+snd_height*j]) if state.recording[i+snd_height*j] else '')
 
                 native_str = ''
                 if(state.compiler_state == CompilerState.COMPILING):
                     for j in range(self.columns(state.native_trace)):
                         native_str += self.expand(
-                            state.native_trace[i+snd_height*j] if state.native_trace[i+snd_height*j] else '')
+                            "{}: {}".format(self.get_line_nr(i+snd_height*j), state.native_trace[i+snd_height*j]) if state.native_trace[i+snd_height*j] else '')
 
                 print('{}{}'.format(record_str, native_str))
