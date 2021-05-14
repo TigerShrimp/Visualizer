@@ -1,0 +1,3 @@
+[submodule "TracingJITCompiler"]
+	path = TracingJITCompiler
+	url = git@github.com:TigerShrimp/TracingJITCompiler.git
