@@ -75,6 +75,9 @@ def main():
                 stop_reason = 'Profiler found potential loop header, iterations in loop indicated'
             state.update(registers, pc, loop_record,
                          local_variables, stack, recording, native_trace)
+            (_, inst) = pc if pc else ('?', '?')
+            if inst == '0':
+                stop_reason = 'Start of method, will begin evaluation'
             bp = BREAKPOINTS[parser.get_breakpoint(output)]
             if bp == "BEFORE_RUN":
                 print("BEFORE_RUN")
